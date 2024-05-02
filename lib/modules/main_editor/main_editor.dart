@@ -398,8 +398,6 @@ class ProImageEditorState extends State<ProImageEditor>
   bool get canRedo => _stateManager.editPosition < _stateManager.stateHistory.length - 1;
 
   /// Get the current image being edited from the change list.
-
-  /// Get the current image being edited from the change list.
   late EditorImage _image;
 
   @override
