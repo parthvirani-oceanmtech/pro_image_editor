@@ -21,7 +21,6 @@ import '../../models/transform_helper.dart';
 import '../../widgets/auto_image.dart';
 import '../../widgets/layer_stack.dart';
 import '../../widgets/outside_gestures/outside_gesture_behavior.dart';
-import '../../widgets/outside_gestures/outside_gesture_detector.dart';
 import '../../widgets/platform_popup_menu.dart';
 import '../../widgets/pro_image_editor_desktop_mode.dart';
 import 'utils/crop_area_part.dart';
@@ -156,7 +155,11 @@ class CropRotateEditor extends StatefulWidget with StandaloneEditor<CropRotateEd
 /// This class handles the state and UI for an image editor
 /// that supports cropping, rotating, and aspect ratio adjustments.
 class CropRotateEditorState extends State<CropRotateEditor>
-    with TickerProviderStateMixin, ImageEditorConvertedConfigs, StandaloneEditorState<CropRotateEditor, CropRotateEditorInitConfigs>, ExtendedLoop {
+    with
+        TickerProviderStateMixin,
+        ImageEditorConvertedConfigs,
+        StandaloneEditorState<CropRotateEditor, CropRotateEditorInitConfigs>,
+        ExtendedLoop {
   final _gestureKey = GlobalKey<CropRotateGestureDetectorState>();
 
   late AnimationController _rotateCtrl;
@@ -275,7 +278,8 @@ class CropRotateEditorState extends State<CropRotateEditor>
     _translate = Offset.zero;
 
     int rotationCount = _rotationCount % 4;
-    _rotateAnimation = Tween<double>(begin: rotationCount == 3 ? pi / 2 : -rotationCount * pi / 2, end: 0).animate(_rotateCtrl);
+    _rotateAnimation =
+        Tween<double>(begin: rotationCount == 3 ? pi / 2 : -rotationCount * pi / 2, end: 0).animate(_rotateCtrl);
     _rotateCtrl
       ..reset()
       ..forward();
@@ -505,7 +509,8 @@ class CropRotateEditorState extends State<CropRotateEditor>
     _startingTranslate = _translate;
 
     // Calculate the center offset point from the old zoomed view
-    _startingCenterOffset = _startingTranslate + _getRealHitPoint(position: details.localFocalPoint, zoom: _userZoom) / _userZoom;
+    _startingCenterOffset =
+        _startingTranslate + _getRealHitPoint(position: details.localFocalPoint, zoom: _userZoom) / _userZoom;
 
     /// On desktop devices we detect always in `onPointerHover` events.
     if (!isDesktop) {
@@ -717,7 +722,8 @@ class CropRotateEditorState extends State<CropRotateEditor>
               _cropRect.right,
               _cropRect.bottom,
             );
-          } else if (_currentCropAreaPart == CropAreaPart.bottomLeft || _currentCropAreaPart == CropAreaPart.bottomRight) {
+          } else if (_currentCropAreaPart == CropAreaPart.bottomLeft ||
+              _currentCropAreaPart == CropAreaPart.bottomRight) {
             _cropRect = Rect.fromLTRB(
               _cropRect.left,
               _cropRect.top,
@@ -729,7 +735,8 @@ class CropRotateEditorState extends State<CropRotateEditor>
 
         setState(() {});
       } else {
-        _translate += Offset(details.focalPointDelta.dx, details.focalPointDelta.dy) * (cropRotateEditorConfigs.reverseDragDirection ? -1 : 1);
+        _translate += Offset(details.focalPointDelta.dx, details.focalPointDelta.dy) *
+            (cropRotateEditorConfigs.reverseDragDirection ? -1 : 1);
         _setOffsetLimits();
 
         setState(() {});
@@ -969,7 +976,8 @@ class CropRotateEditorState extends State<CropRotateEditor>
         break;
       case CropAreaPart.inside:
       case CropAreaPart.none:
-        if (_userZoom > 1 || _cropRect.size.aspectRatio.toStringAsFixed(3) != _renderedImgSize.aspectRatio.toStringAsFixed(3)) {
+        if (_userZoom > 1 ||
+            _cropRect.size.aspectRatio.toStringAsFixed(3) != _renderedImgSize.aspectRatio.toStringAsFixed(3)) {
           _cursor = SystemMouseCursors.move;
         } else {
           _cursor = SystemMouseCursors.basic;
