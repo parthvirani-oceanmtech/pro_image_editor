@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:screenshot/screenshot.dart';
 
 import '../models/crop_rotate_editor/transform_factors.dart';
 import '../models/editor_image.dart';
@@ -11,6 +10,8 @@ import '../models/init_configs/blur_editor_init_configs.dart';
 import '../models/transform_helper.dart';
 import '../mixins/converted_configs.dart';
 import '../mixins/standalone_editor.dart';
+import '../utils/content_recorder.dart/content_recorder.dart';
+import '../utils/content_recorder.dart/content_recorder_controller.dart';
 import '../widgets/layer_stack.dart';
 import '../widgets/loading_dialog.dart';
 import '../widgets/transform/transformed_content_generator.dart';
@@ -145,7 +146,7 @@ class BlurEditorState extends State<BlurEditor>
         ImageEditorConvertedConfigs,
         StandaloneEditorState<BlurEditor, BlurEditorInitConfigs> {
   /// Manages the capturing a screenshot of the image.
-  ScreenshotController screenshotController = ScreenshotController();
+  ContentRecorderController screenshotController = ContentRecorderController();
 
   /// Represents the selected blur state.
   late double selectedBlur;
@@ -240,7 +241,7 @@ class BlurEditorState extends State<BlurEditor>
   Widget _buildBody() {
     return LayoutBuilder(builder: (context, constraints) {
       _bodySize = constraints.biggest;
-      return Screenshot(
+      return ContentRecorder(
         controller: screenshotController,
         child: Stack(
           alignment: Alignment.center,
@@ -250,10 +251,11 @@ class BlurEditorState extends State<BlurEditor>
               createRectTween: (begin, end) =>
                   RectTween(begin: begin, end: end),
               child: TransformedContentGenerator(
-                configs: transformConfigs ?? TransformConfigs.empty(),
+                configs: configs,
+                transformConfigs: transformConfigs ?? TransformConfigs.empty(),
                 child: ImageWithMultipleFilters(
-                  width: initConfigs.imageSize.width,
-                  height: initConfigs.imageSize.height,
+                  width: getMinimumSize(mainImageSize, _bodySize).width,
+                  height: getMinimumSize(mainImageSize, _bodySize).height,
                   designMode: designMode,
                   image: editorImage,
                   filters: appliedFilters,
@@ -264,8 +266,8 @@ class BlurEditorState extends State<BlurEditor>
             if (blurEditorConfigs.showLayers && layers != null)
               LayerStack(
                 transformHelper: TransformHelper(
-                  mainBodySize: bodySizeWithLayers,
-                  mainImageSize: imageSizeWithLayers,
+                  mainBodySize: getMinimumSize(mainBodySize, _bodySize),
+                  mainImageSize: getMinimumSize(mainImageSize, _bodySize),
                   editorBodySize: _bodySize,
                 ),
                 configs: configs,

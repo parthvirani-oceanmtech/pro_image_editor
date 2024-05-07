@@ -27,6 +27,7 @@ import '../../widgets/pro_image_editor_desktop_mode.dart';
 import '../../widgets/transform/transformed_content_generator.dart';
 import '../filter_editor/widgets/image_with_multiple_filters.dart';
 import 'painting_canvas.dart';
+import 'utils/paint_desktop_interaction_manager.dart';
 import 'utils/paint_editor_enum.dart';
 
 /// The `PaintingEditor` widget allows users to editing images with painting tools.
@@ -177,6 +178,9 @@ class PaintingEditorState extends State<PaintingEditor>
   /// Determines whether redo actions can be performed on the current state.
   bool get canRedo => _imageKey.currentState?.canRedo == true;
 
+  /// Manager class for handling desktop interactions.
+  late final PaintDesktopInteractionManager _desktopInteractionManager;
+
   /// Get the current PaintMode from the ImageKey's currentState.
   PaintModeE? get paintMode => _imageKey.currentState?.mode;
 
@@ -186,6 +190,9 @@ class PaintingEditorState extends State<PaintingEditor>
   /// Get the active selected color.
   Color get activeColor =>
       _imageKey.currentState?.activeColor ?? Colors.black38;
+
+  /// Represents the dimensions of the body.
+  Size _bodySize = Size.zero;
 
   /// A list of [PaintModeBottomBarItem] representing the available drawing modes in the painting editor.
   /// The list is dynamically generated based on the configuration settings in the [PaintEditorConfigs] object.
@@ -230,21 +237,39 @@ class PaintingEditorState extends State<PaintingEditor>
 
   @override
   void initState() {
+    super.initState();
     _fill = paintEditorConfigs.initialFill;
     _bottomBarScrollCtrl = ScrollController();
+    _desktopInteractionManager =
+        PaintDesktopInteractionManager(context: context);
+    ServicesBinding.instance.keyboard.addHandler(_onKeyEvent);
 
     /// Important to set state after view init to set action icons
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       setState(() {});
       onUpdateUI?.call();
     });
-    super.initState();
   }
 
   @override
   void dispose() {
     _bottomBarScrollCtrl.dispose();
+    ServicesBinding.instance.keyboard.removeHandler(_onKeyEvent);
     super.dispose();
+  }
+
+  /// Handle keyboard events
+  bool _onKeyEvent(KeyEvent event) {
+    return _desktopInteractionManager.onKey(
+      event,
+      onUndoRedo: (undo) {
+        if (undo) {
+          undoAction();
+        } else {
+          redoAction();
+        }
+      },
+    );
   }
 
   /// Opens a bottom sheet to adjust the line weight when drawing.
@@ -462,59 +487,64 @@ class PaintingEditorState extends State<PaintingEditor>
   /// Builds the main body of the painting editor.
   /// Returns a [Widget] representing the editor's body.
   Widget _buildBody() {
-    return SafeArea(
-      child: Theme(
-        data: theme,
-        child: Material(
-          color: Colors.transparent,
-          textStyle: platformTextStyle(context, designMode),
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              TransformedContentGenerator(
-                configs: transformConfigs ?? TransformConfigs.empty(),
-                child: ImageWithMultipleFilters(
-                  width: initConfigs.imageSize.width,
-                  height: initConfigs.imageSize.height,
-                  designMode: designMode,
-                  image: editorImage,
-                  filters: appliedFilters,
-                  blurFactor: appliedBlurFactor,
-                ),
-              ),
-              if (layers != null)
-                LayerStack(
+    return LayoutBuilder(builder: (context, constraints) {
+      _bodySize = constraints.biggest;
+      return SafeArea(
+        child: Theme(
+          data: theme,
+          child: Material(
+            color: Colors.transparent,
+            textStyle: platformTextStyle(context, designMode),
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                TransformedContentGenerator(
                   configs: configs,
-                  layers: layers!,
-                  paddingHelper: initConfigs.paddingHelper,
+                  transformConfigs:
+                      transformConfigs ?? TransformConfigs.empty(),
+                  child: ImageWithMultipleFilters(
+                    width: getMinimumSize(mainImageSize, _bodySize).width,
+                    height: getMinimumSize(mainImageSize, _bodySize).height,
+                    designMode: designMode,
+                    image: editorImage,
+                    filters: appliedFilters,
+                    blurFactor: appliedBlurFactor,
+                  ),
                 ),
-              _buildPainter(),
-              if (paintEditorConfigs.showColorPicker) _buildColorPicker(),
-              if (imageEditorTheme.editorMode == ThemeEditorMode.whatsapp) ...[
-                WhatsAppPaintBottomBar(
-                  configs: configs,
-                  strokeWidth: _imageKey.currentState?.strokeWidth ?? 0.0,
-                  onSetLineWidth: (val) {
-                    setState(() {
-                      _imageKey.currentState!.setStrokeWidth(val);
-                    });
-                  },
-                ),
-                WhatsAppPaintAppBar(
-                  configs: configs,
-                  canUndo: canUndo,
-                  onDone: done,
-                  onTapUndo: undoAction,
-                  onClose: close,
-                  activeColor: activeColor,
-                ),
-              ]
-            ],
+                if (layers != null)
+                  LayerStack(
+                    configs: configs,
+                    layers: layers!,
+                  ),
+                _buildPainter(),
+                if (paintEditorConfigs.showColorPicker) _buildColorPicker(),
+                if (imageEditorTheme.editorMode ==
+                    ThemeEditorMode.whatsapp) ...[
+                  WhatsAppPaintBottomBar(
+                    configs: configs,
+                    strokeWidth: _imageKey.currentState?.strokeWidth ?? 0.0,
+                    onSetLineWidth: (val) {
+                      setState(() {
+                        _imageKey.currentState!.setStrokeWidth(val);
+                      });
+                    },
+                  ),
+                  WhatsAppPaintAppBar(
+                    configs: configs,
+                    canUndo: canUndo,
+                    onDone: done,
+                    onTapUndo: undoAction,
+                    onClose: close,
+                    activeColor: activeColor,
+                  ),
+                ]
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   /// Builds the bottom navigation bar of the painting editor.
@@ -600,7 +630,7 @@ class PaintingEditorState extends State<PaintingEditor>
         icons: icons,
         theme: theme,
         designMode: designMode,
-        imageSize: initConfigs.imageSize,
+        drawAreaSize: mainBodySize ?? _bodySize,
         imageEditorTheme: imageEditorTheme,
         configs: paintEditorConfigs,
         onUpdate: () {

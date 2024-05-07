@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pro_image_editor/models/editor_configs/pro_image_editor_configs.dart';
 import 'package:pro_image_editor/models/theme/theme_layer_interaction.dart';
@@ -440,7 +441,7 @@ class LayerInteractionHelper {
   void _lineHitVibrate() {
     if (deviceCanVibrate && deviceCanCustomVibrate) {
       Vibration.vibrate(duration: 3);
-    } else if (Platform.isAndroid) {
+    } else if (!kIsWeb && Platform.isAndroid) {
       // On old android devices we can stop the vibration after 3 milliseconds
       // iOS: only works for custom haptic vibrations using CHHapticEngine.
       // This will set `deviceCanCustomVibrate` anyway to true so it's impossible to fake it.

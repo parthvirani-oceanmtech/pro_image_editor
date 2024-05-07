@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pro_image_editor/models/transform_helper.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:screenshot/screenshot.dart';
 
 import '../../models/crop_rotate_editor/transform_factors.dart';
 import '../../models/editor_image.dart';
 import '../../models/history/filter_state_history.dart';
 import '../../mixins/converted_configs.dart';
 import '../../mixins/standalone_editor.dart';
+import '../../utils/content_recorder.dart/content_recorder.dart';
+import '../../utils/content_recorder.dart/content_recorder_controller.dart';
 import '../../widgets/layer_stack.dart';
 import '../../widgets/loading_dialog.dart';
 import '../../widgets/transform/transformed_content_generator.dart';
@@ -147,7 +148,7 @@ class FilterEditorState extends State<FilterEditor>
         ImageEditorConvertedConfigs,
         StandaloneEditorState<FilterEditor, FilterEditorInitConfigs> {
   /// Manages the capturing a screenshot of the image.
-  ScreenshotController screenshotController = ScreenshotController();
+  ContentRecorderController screenshotController = ContentRecorderController();
 
   /// The selected filter.
   ColorFilterGenerator selectedFilter = PresetFilters.none;
@@ -243,8 +244,7 @@ class FilterEditorState extends State<FilterEditor>
   Widget _buildBody() {
     return LayoutBuilder(builder: (context, constraints) {
       _bodySize = constraints.biggest;
-
-      return Screenshot(
+      return ContentRecorder(
         controller: screenshotController,
         child: Stack(
           alignment: Alignment.center,
@@ -254,10 +254,11 @@ class FilterEditorState extends State<FilterEditor>
               createRectTween: (begin, end) =>
                   RectTween(begin: begin, end: end),
               child: TransformedContentGenerator(
-                configs: transformConfigs ?? TransformConfigs.empty(),
+                configs: configs,
+                transformConfigs: transformConfigs ?? TransformConfigs.empty(),
                 child: ImageWithMultipleFilters(
-                  width: initConfigs.imageSizeWithLayers.width,
-                  height: initConfigs.imageSizeWithLayers.height,
+                  width: getMinimumSize(mainImageSize, _bodySize).width,
+                  height: getMinimumSize(mainImageSize, _bodySize).height,
                   designMode: designMode,
                   image: editorImage,
                   filters: [
@@ -274,8 +275,8 @@ class FilterEditorState extends State<FilterEditor>
             if (filterEditorConfigs.showLayers && layers != null)
               LayerStack(
                 transformHelper: TransformHelper(
-                  mainBodySize: bodySizeWithLayers,
-                  mainImageSize: imageSizeWithLayers,
+                  mainBodySize: getMinimumSize(mainBodySize, _bodySize),
+                  mainImageSize: getMinimumSize(mainImageSize, _bodySize),
                   editorBodySize: _bodySize,
                 ),
                 configs: configs,
@@ -312,8 +313,8 @@ class FilterEditorState extends State<FilterEditor>
                     ),
             ),
             FilterEditorItemList(
-              bodySizeWithLayers: bodySizeWithLayers,
-              imageSizeWithLayers: imageSizeWithLayers,
+              mainBodySize: getMinimumSize(mainBodySize, _bodySize),
+              mainImageSize: getMinimumSize(mainImageSize, _bodySize),
               byteArray: editorImage.byteArray,
               file: editorImage.file,
               assetPath: editorImage.assetPath,

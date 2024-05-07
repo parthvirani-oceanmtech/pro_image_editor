@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../../models/theme/theme.dart';
@@ -9,6 +10,7 @@ class CropCornerPainter extends CustomPainter {
   final Size screenSize;
   final ImageEditorTheme imageEditorTheme;
   final bool interactionActive;
+  final bool drawCircle;
   final Offset offset;
   final double opacity;
 
@@ -26,6 +28,7 @@ class CropCornerPainter extends CustomPainter {
   double get _cropOffsetBottom => cropRect.bottom;
 
   CropCornerPainter({
+    required this.drawCircle,
     required this.offset,
     required this.cropRect,
     required this.opacity,
@@ -40,19 +43,10 @@ class CropCornerPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // TODO: Create rounded cropper
+    if (size.isInfinite) return;
     _drawDarkenOutside(canvas: canvas, size: size);
     if (interactionActive) _drawHelperAreas(canvas: canvas, size: size);
     _drawCorners(canvas: canvas, size: size);
-
-    /// TODO: Delete me
-    if (kDebugMode) {
-      canvas.drawCircle(
-        Offset(size.width / 2, size.height / 2),
-        2,
-        Paint()..color = Colors.red.shade900,
-      );
-    }
   }
 
   void _drawDarkenOutside({
@@ -64,6 +58,9 @@ class CropCornerPainter extends CustomPainter {
     double cropHeight = _cropOffsetBottom - _cropOffsetTop;
 
     Path path = Path();
+
+    /// Filltype "evenOdd" is important for the canvas web renderer
+    path.fillType = PathFillType.evenOdd;
     path.addRect(Rect.fromCenter(
       center: Offset(
         size.width / 2 + offset.dx * scaleFactor,
@@ -72,30 +69,53 @@ class CropCornerPainter extends CustomPainter {
       width: size.width * scaleFactor,
       height: size.height * scaleFactor,
     ));
-
-    /// Create a path for the current rectangle
-    Path rectPath = Path()
-      ..addRect(
-        Rect.fromCenter(
-          center: Offset(
-            cropWidth / 2 + _cropOffsetLeft,
-            cropHeight / 2 + _cropOffsetTop,
+    if (drawCircle) {
+      /// Create a path for the current rectangle
+      Path circlePath = Path()
+        ..addOval(
+          Rect.fromCenter(
+            center: Offset(
+              cropWidth / 2 + _cropOffsetLeft,
+              cropHeight / 2 + _cropOffsetTop,
+            ),
+            width: cropWidth,
+            height: cropHeight,
           ),
-          width: cropWidth,
-          height: cropHeight,
-        ),
-      );
+        );
 
-    /// Subtract the area of the current rectangle from the path for the entire canvas
-    path = Path.combine(PathOperation.difference, path, rectPath);
+      /// Subtract the area of the current rectangle from the path for the entire canvas
+      path = Path.combine(PathOperation.difference, path, circlePath);
+    } else {
+      /// Create a path for the current rectangle
+      Path rectPath = Path()
+        ..addRect(
+          Rect.fromCenter(
+            center: Offset(
+              cropWidth / 2 + _cropOffsetLeft,
+              cropHeight / 2 + _cropOffsetTop,
+            ),
+            width: cropWidth,
+            height: cropHeight,
+          ),
+        );
+
+      /// Subtract the area of the current rectangle from the path for the entire canvas
+      path = Path.combine(PathOperation.difference, path, rectPath);
+    }
+
+    Color backgroundColor = imageEditorTheme.cropRotateEditor.cropOverlayColor;
 
     /// Draw the darkened area
     canvas.drawPath(
       path,
       Paint()
         ..color = interactionActive
-            ? Colors.black.withOpacity(0.5 * opacity)
-            : Colors.black.withOpacity(0.7 * opacity)
+            ? backgroundColor.withOpacity(
+                (0.6 + 0.4 * (1 - opacity)).clamp(0, 1),
+              )
+            : backgroundColor.withOpacity(
+                (0.84 + 0.16 * (1 - opacity)).clamp(0, 1),
+              )
         ..style = PaintingStyle.fill,
     );
   }
@@ -106,38 +126,104 @@ class CropCornerPainter extends CustomPainter {
   }) {
     Path path = Path();
 
-    double length = cornerLength / rotationScaleFactor;
     double width = cornerWidth / rotationScaleFactor;
+    if (!drawCircle) {
+      double length = cornerLength / rotationScaleFactor;
 
-    /// Top-Left
-    path.addRect(Rect.fromLTWH(_cropOffsetLeft, _cropOffsetTop, length, width));
-    path.addRect(Rect.fromLTWH(_cropOffsetLeft, _cropOffsetTop, width, length));
+      /// Top-Left
+      path.addRect(
+          Rect.fromLTWH(_cropOffsetLeft, _cropOffsetTop, length, width));
+      path.addRect(
+          Rect.fromLTWH(_cropOffsetLeft, _cropOffsetTop, width, length));
 
-    /// Top-Right
-    path.addRect(Rect.fromLTWH(
-        _cropOffsetRight - length, _cropOffsetTop, length, width));
-    path.addRect(
-        Rect.fromLTWH(_cropOffsetRight - width, _cropOffsetTop, width, length));
+      /// Top-Right
+      path.addRect(Rect.fromLTWH(
+          _cropOffsetRight - length, _cropOffsetTop, length, width));
+      path.addRect(Rect.fromLTWH(
+          _cropOffsetRight - width, _cropOffsetTop, width, length));
 
-    /// Bottom-Left
-    path.addRect(Rect.fromLTWH(
-        0 + _cropOffsetLeft, _cropOffsetBottom - width, length, width));
-    path.addRect(Rect.fromLTWH(
-        0 + _cropOffsetLeft, _cropOffsetBottom - length, width, length));
+      /// Bottom-Left
+      path.addRect(Rect.fromLTWH(
+          0 + _cropOffsetLeft, _cropOffsetBottom - width, length, width));
+      path.addRect(Rect.fromLTWH(
+          0 + _cropOffsetLeft, _cropOffsetBottom - length, width, length));
 
-    /// Bottom-Right
-    path.addRect(Rect.fromLTWH(
-        _cropOffsetRight - length, _cropOffsetBottom - width, length, width));
-    path.addRect(Rect.fromLTWH(
-        _cropOffsetRight - width, _cropOffsetBottom - length, width, length));
+      /// Bottom-Right
+      path.addRect(Rect.fromLTWH(
+          _cropOffsetRight - length, _cropOffsetBottom - width, length, width));
+      path.addRect(Rect.fromLTWH(
+          _cropOffsetRight - width, _cropOffsetBottom - length, width, length));
 
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = imageEditorTheme.cropRotateEditor.cropCornerColor
-            .withOpacity(opacity)
-        ..style = PaintingStyle.fill,
-    );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = imageEditorTheme.cropRotateEditor.cropCornerColor
+              .withOpacity(opacity)
+          ..style = PaintingStyle.fill,
+      );
+    } else {
+      double calculateAngleFromArcLength(
+          double circumference, double arcLength) {
+        if (circumference <= 0 || arcLength <= 0) {
+          throw ArgumentError(
+              "Circumference and arc length must be positive values.");
+        }
+        return circumference / 360 * arcLength * pi / 180;
+      }
+
+      double angleRadians =
+          calculateAngleFromArcLength(cropRect.width, width * 2);
+
+      /// Top
+      path.addArc(
+        Rect.fromCenter(
+            center: cropRect.center,
+            width: cropRect.width,
+            height: cropRect.height),
+        3 * pi / 2 - angleRadians / 2,
+        angleRadians,
+      );
+
+      /// Left
+      path.addArc(
+        Rect.fromCenter(
+            center: cropRect.center,
+            width: cropRect.width,
+            height: cropRect.height),
+        pi - angleRadians / 2,
+        angleRadians,
+      );
+
+      /// Right
+      path.addArc(
+        Rect.fromCenter(
+            center: cropRect.center,
+            width: cropRect.width,
+            height: cropRect.height),
+        pi / 2 - angleRadians / 2,
+        angleRadians,
+      );
+
+      /// Right
+      path.addArc(
+        Rect.fromCenter(
+            center: cropRect.center,
+            width: cropRect.width,
+            height: cropRect.height),
+        -angleRadians / 2,
+        angleRadians,
+      );
+
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = imageEditorTheme.cropRotateEditor.cropCornerColor
+              .withOpacity(opacity)
+          ..strokeWidth = width
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke,
+      );
+    }
   }
 
   void _drawHelperAreas({
@@ -149,21 +235,35 @@ class CropCornerPainter extends CustomPainter {
     double cropWidth = _cropOffsetRight - _cropOffsetLeft;
     double cropHeight = _cropOffsetBottom - _cropOffsetTop;
 
+    double cropAreaSpaceW = cropWidth / 3;
+    double cropAreaSpaceH = cropHeight / 3;
+
+    /// Calculation is important for the round-cropper
+    double lineWidth = !drawCircle
+        ? cropWidth
+        : sqrt(pow(cropWidth, 2) - pow(cropAreaSpaceW, 2));
+    double lineHeight = !drawCircle
+        ? cropHeight
+        : sqrt(pow(cropHeight, 2) - pow(cropAreaSpaceH, 2));
+
+    double gapW = (cropWidth - lineWidth) / 2;
+    double gapH = (cropHeight - lineHeight) / 2;
+
     for (var i = 1; i < 3; i++) {
       path.addRect(
         Rect.fromLTWH(
-          cropWidth / 3 * i + _cropOffsetLeft,
-          _cropOffsetTop,
+          cropAreaSpaceW * i + _cropOffsetLeft,
+          gapH + _cropOffsetTop,
           helperLineWidth,
-          _cropOffsetBottom - _cropOffsetTop,
+          lineHeight,
         ),
       );
 
       path.addRect(
         Rect.fromLTWH(
-          _cropOffsetLeft,
-          cropHeight / 3 * i + _cropOffsetTop,
-          cropWidth,
+          gapW + _cropOffsetLeft,
+          cropAreaSpaceH * i + _cropOffsetTop,
+          lineWidth,
           helperLineWidth,
         ),
       );
