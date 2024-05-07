@@ -404,10 +404,6 @@ class ProImageEditorState extends State<ProImageEditor>
   /// takes a picture
   bool _screenshotHideOutsideImgContent = false;
 
-  /// Hide all layers outside the drawn image when the screenshot controller
-  /// takes a picture
-  bool _screenshotHideOutsideImgContent = false;
-
   /// Get the current image being edited from the change list.
   late EditorImage _image;
 
