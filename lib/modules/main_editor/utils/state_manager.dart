@@ -16,8 +16,7 @@ class StateManager {
   List<FilterStateHistory> get filters => stateHistory[editPosition].filters;
 
   /// Get the transformconfigurations from the crop/ rotate editor.
-  TransformConfigs get transformConfigs =>
-      stateHistory[editPosition].transformConfigs;
+  TransformConfigs get transformConfigs => stateHistory[editPosition].transformConfigs;
 
   /// Get the blur state from the current image editor changes.
   BlurStateHistory get blurStateHistory => stateHistory[editPosition].blur;

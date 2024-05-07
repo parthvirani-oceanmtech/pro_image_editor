@@ -16,12 +16,10 @@ class TransformedContentGenerator extends StatefulWidget {
   });
 
   @override
-  State<TransformedContentGenerator> createState() =>
-      _TransformedContentGeneratorState();
+  State<TransformedContentGenerator> createState() => _TransformedContentGeneratorState();
 }
 
-class _TransformedContentGeneratorState
-    extends State<TransformedContentGenerator> {
+class _TransformedContentGeneratorState extends State<TransformedContentGenerator> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -49,8 +47,7 @@ class _TransformedContentGeneratorState
                   ),
                 );
 
-                CutOutsideArea clipper =
-                    CutOutsideArea(configs: widget.transformConfigs);
+                CutOutsideArea clipper = CutOutsideArea(configs: widget.transformConfigs);
 
                 if (widget.configs.cropRotateEditorConfigs.roundCropper) {
                   return ClipOval(clipper: clipper, child: child);
